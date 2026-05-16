@@ -1,0 +1,36 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+export ledger proofs: Set<Bytes<32>>;
+
+enum ResultCategory { MILD, MODERATE, SEVERE }
+enum Recommendation { SELF_CARE, TALK_TO_PRO, URGENT }
+
+witness severityScore(): Uint<0..100>;
+
+pure circuit computeCategory(score: Uint<0..100>): ResultCategory {
+  if (score < 7) { return ResultCategory.MILD; }
+  if (score < 14) { return ResultCategory.MODERATE; }
+  return ResultCategory.SEVERE;
+}
+
+pure circuit computeRecommendation(category: ResultCategory): Recommendation {
+  if (category == ResultCategory.SEVERE) { return Recommendation.URGENT; }
+  if (category == ResultCategory.MODERATE) { return Recommendation.TALK_TO_PRO; }
+  return Recommendation.SELF_CARE;
+}
+
+export circuit submitScreening(timestamp: Uint<64>): [ResultCategory, Recommendation, Uint<64>, Bytes<32>] {
+  const score = severityScore();
+  const category = computeCategory(score);
+  const recommendation = computeRecommendation(category);
+  const proofHash = persistentHash<Uint<0..100>>(score);
+  proofs.insert(disclose(proofHash));
+  return [
+    disclose(category),
+    disclose(recommendation),
+    disclose(timestamp),
+    disclose(proofHash),
+  ];
+}
