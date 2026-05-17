@@ -323,7 +323,7 @@ The `mintProof()` function assembles 6 provider objects:
 | `privateStateProvider` | Custom in-memory | Manages contract private state |
 | `publicDataProvider` | `@midnight-ntwrk/midnight-js-indexer-public-data-provider` | Reads on-chain public state |
 | `zkConfigProvider` | `@midnight-ntwrk/midnight-js-fetch-zk-config-provider` | Fetches ZK proving keys from `/zk/mindsafe/` |
-| `proofProvider` | Custom wrapper | Delegates proving to wallet |
+| `proofProvider` | `@midnight-ntwrk/midnight-js-http-client-proof-provider` | Delegates proving to a local/remote Docker proof server (e.g. `http://127.0.0.1:6300`) |
 | `walletProvider` | Custom → 1AM API | Provides coin keys + transaction balancing |
 | `midnightProvider` | Custom → 1AM API | Submits final transaction to chain |
 
@@ -461,8 +461,8 @@ All state is `useState` — no external state library, no persistence:
 
 ### 5.2 Identified Risks
 
-> [!WARNING]
-> **API Key Exposure**: The Gemini API key (`VITE_GEMINI_API_KEY`) is embedded in the client-side bundle via Vite's `import.meta.env`. This key is visible in the browser's network tab and the JS bundle. Any user can extract and abuse it.
+> [!TIP]
+> **API Key Security Resolved**: The Gemini API key (`VITE_GEMINI_API_KEY`) exposure risk was successfully mitigated. The UI now securely accepts the user's API key client-side at runtime, eliminating the need to hardcode it in the frontend bundle.
 
 > [!WARNING]
 > **Network-level leakage**: While the conversation isn't stored, the full chat history is sent to Google's Gemini API on every message. Google's data retention policies apply. This is a privacy trade-off that should be disclosed to users.
@@ -472,7 +472,7 @@ All state is `useState` — no external state library, no persistence:
 
 | Risk | Severity | Mitigation Recommendation |
 |------|----------|--------------------------|
-| API key in client bundle | High | Add a thin backend proxy or use server-side API keys |
+| API key in client bundle | Resolved | Mitigated by adding runtime UI prompt for API key input |
 | Gemini data retention | Medium | Explore on-device AI models (e.g., Gemini Nano) or self-hosted LLMs |
 | No input validation on chat | Low | Add content moderation / safety filters |
 | No rate limiting | Medium | Implement wallet-based rate limiting on contract level |
@@ -510,11 +510,12 @@ The `resolutions` field forces specific versions to avoid transitive dependency 
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
-| `VITE_GEMINI_API_KEY` | ✅ | — | Gemini API authentication |
+| `VITE_GEMINI_API_KEY` | ❌ | — | Optional. If not set, user enters it in UI. |
 | `VITE_GEMINI_MODEL` | ❌ | `gemini-2.5-flash` | AI model selection |
 | `VITE_MIDNIGHT_NETWORK` | ❌ | `preview` | Target Midnight network |
 | `VITE_ZK_ASSET_BASE` | ❌ | `/zk/mindsafe` | Path to ZK proving keys |
 | `VITE_NODE_URL` | ❌ | `wss://rpc.testnet-02.midnight.network` | Midnight RPC endpoint |
+| `VITE_PROOF_SERVER_URL` | ❌ | `http://127.0.0.1:6300` | Local Docker proof server endpoint |
 | `VITE_CONTRACT_ADDRESS` | ✅ | — | Deployed contract address |
 
 ---
@@ -540,10 +541,9 @@ The `resolutions` field forces specific versions to avoid transitive dependency 
 
 ### Short-Term (Ship-Ready)
 
-1. **Proxy the Gemini API key** through a lightweight edge function (Vercel/Cloudflare Worker) to prevent client-side key exposure.
-2. **Add loading skeletons** and error retry logic for AI calls.
-3. **Add keyboard support** — Enter to send in chat, Escape to end session.
-4. **Remove `.env` from version control** — it currently contains the real API key (add to `.gitignore`, which already lists it, but the file exists in the repo).
+1. **Add loading skeletons** and error retry logic for AI calls.
+2. **Add keyboard support** — Enter to send in chat, Escape to end session.
+3. **Refine Proof Status UX** — Continue to refine the indexer latency fallbacks.
 
 ### Medium-Term (Production Quality)
 
